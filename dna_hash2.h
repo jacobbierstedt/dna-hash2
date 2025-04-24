@@ -79,11 +79,11 @@ static const uint8_t dec_dna_8[8] = {'A', 'C', 'G', 'T', 'N'};
 #define ENCODE_REV(mask, base)  mask<<=2; mask |= ENCODE_RC(base)
 
 /*
-  Hash DNA sequence as 32-bit integer.
+  Hash DNA sequence as 64- or 32-bit integer.
   This function takes a DNA sequence and its length and
   returns a unsigned long long integer that represents
   the sequence. It uses 2-bit encoding and works for 
-  sequences up to 16 bp.
+  sequences up to 32/16 bp.
 */
 
 #define __HASH_DNA(dna_type_t) \
@@ -107,7 +107,7 @@ static const uint8_t dec_dna_8[8] = {'A', 'C', 'G', 'T', 'N'};
   }
 
 /*
-  Hash a k-mer of length k to a 32-bit integer at a given position.
+  Hash a k-mer of length k to a 64- or 32-bit integer at a given position.
 */
 
 #define __KMER_DNA(dna_type_t) \
@@ -121,8 +121,8 @@ static const uint8_t dec_dna_8[8] = {'A', 'C', 'G', 'T', 'N'};
   }
 
 /*
-  Compute the 64-bit minimizer of length m for a k-mer of length k at a
-  given position. Max minimizer length is 32.
+  Compute the 64- or 32-bit minimizer of length m for a k-mer of length k at a
+  given position. Max minimizer length is 32/16.
 */
 #define __MINIMIZER_DNA(dna_type_t) \
 static inline dna_type_t minimizer_##dna_type_t(const char* seq, int seqlen, int kstart, int k, int m) \
