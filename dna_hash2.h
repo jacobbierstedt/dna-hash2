@@ -23,7 +23,6 @@ SOFTWARE.
 */
 
 
-
 /*
   dna-hash2: A header-only C library for fast hashing of short DNA sequences
 */
@@ -43,14 +42,36 @@ typedef uint32_t dna32_t;
 typedef uint64_t dna64_t;
 #endif
 
-#define DEFAULT_KMASK 0x07
-#define DEFAULT_MAX_64 0xFFFFFFFFFFFFFFFF
-#define DEFAULT_MAX_32 0xFFFFFFFF
 
+
+/*
+  Macros for initializing 32-bit and 64-bit functions
+*/
+#define DNA_HASH2_INIT_32() \
+  __HASH_DNA(dna32_t) \
+  __HASH_DNA_RC(dna32_t) \
+  __KMER_DNA(dna32_t) \
+  __MINIMIZER_DNA(dna32_t) \
+  __DECODE_DNA(dna32_t)
+
+#define DNA_HASH2_INIT_64() \
+  __HASH_DNA(dna64_t) \
+  __HASH_DNA_RC(dna64_t) \
+  __KMER_DNA(dna64_t) \
+  __MINIMIZER_DNA(dna64_t) \
+  __DECODE_DNA(dna64_t)
+
+#define DNA_HASH2_INIT() \
+  DNA_HASH2_INIT_64() \
+  DNA_HASH2_INIT_32()
+
+
+#define DEFAULT_KMASK 0x00
+#define _DNA_8_MASK 0x07
                                     /*  A     C  T        G*/
 static const uint8_t dna_8[8]     = {4, 0, 4, 1, 3, 4, 4, 2};
 static const uint8_t rev_dna_8[8] = {4, 3, 4, 2, 0, 4, 4, 1};
-#define _DNA_8_MASK 0x07
+static const uint8_t dec_dna_8[8] = {'A', 'C', 'G', 'T', 'N'};
 
 #define ENCODE(c)    dna_8[c & _DNA_8_MASK]  //; printf("%c %u %u\n",c, c & _DNA_8_MASK, dna_8[c & _DNA_8_MASK] )
 #define ENCODE_RC(c) rev_dna_8[c & _DNA_8_MASK] 
@@ -64,77 +85,68 @@ static const uint8_t rev_dna_8[8] = {4, 3, 4, 2, 0, 4, 4, 1};
   the sequence. It uses 2-bit encoding and works for 
   sequences up to 16 bp.
 */
-static inline dna32_t hash32_dna(const char* seq, int seqlen)
-{
-  dna32_t mask = DEFAULT_KMASK;
-  for (int i = 0; i < seqlen; i++) {
-    ENCODE_BASE(mask, seq[i]);
-  }
-  return mask;
-}
 
-static inline dna32_t hash32_dna_rc(const char* seq, int seqlen)
-{
-  dna32_t mask = DEFAULT_KMASK;
-  for (int i = seqlen; i > 0; i--) {
-    ENCODE_REV(mask, seq[i-1]);
+#define __HASH_DNA(dna_type_t) \
+  static inline dna_type_t hash_##dna_type_t(const char* seq, int seqlen) \
+  { \
+    dna_type_t mask = DEFAULT_KMASK; \
+    for (int i = 0; i < seqlen; i++) { \
+      ENCODE_BASE(mask, seq[i]); \
+    } \
+    return mask; \
   }
-  return mask;
-}
-/*
-  Hash DNA sequence as 64-bit integer.
-  This function takes a DNA sequence and its length and
-  returns a unsigned long long integer that represents
-  the sequence. It uses 2-bit encoding and works for 
-  sequences up to 32 bp.
-*/
-static inline dna64_t hash64_dna(const char* seq, int seqlen)
-{
-  dna64_t mask = DEFAULT_KMASK;
-  for (int i = 0; i < seqlen; i++) {
-    ENCODE_BASE(mask, seq[i]);
-  }
-  return mask;
-}
 
-static inline dna64_t hash64_dna_rc(const char* seq, int seqlen)
-{
-  dna64_t mask = DEFAULT_KMASK;
-  for (int i = seqlen; i > 0; i--) {
-    ENCODE_REV(mask, seq[i-1]);
+#define __HASH_DNA_RC(dna_type_t) \
+  static inline dna_type_t hash_##dna_type_t##_rc(const char* seq, int seqlen) \
+  { \
+    dna_type_t mask = DEFAULT_KMASK; \
+    for (int i = seqlen; i > 0; i--) { \
+      ENCODE_REV(mask, seq[i-1]); \
+    } \
+    return mask; \
   }
-  return mask;
-}
 
 /*
   Hash a k-mer of length k to a 32-bit integer at a given position.
 */
-static inline dna32_t kmer32_dna(const char* seq, int seqlen, int k, int kstart)
-{
-  dna32_t kmer = DEFAULT_KMASK;
-  for (int i = kstart; i < kstart + k; i++) {
-    ENCODE_BASE(kmer, seq[i]);
+
+#define __KMER_DNA(dna_type_t) \
+  static inline dna_type_t kmer_##dna_type_t(const char* seq, int seqlen, int k, int kstart) \
+  { \
+    dna_type_t kmer = DEFAULT_KMASK; \
+    for (int i = kstart; i < kstart + k; i++) { \
+      ENCODE_BASE(kmer, seq[i]); \
+    } \
+    return kmer; \
   }
-  return kmer;
+
+/*
+  Compute the 64-bit minimizer of length m for a k-mer of length k at a
+  given position. Max minimizer length is 32.
+*/
+#define __MINIMIZER_DNA(dna_type_t) \
+static inline dna_type_t minimizer_##dna_type_t(const char* seq, int seqlen, int kstart, int k, int m) \
+{ \
+  dna_type_t mini = UINT64_MAX; \
+  for (int i = kstart; i < kstart + k - m + 1; i++) { \
+    dna_type_t mhash = kmer_##dna_type_t(seq, seqlen, m, i); \
+    if (mhash < mini) { \
+      mini = mhash; \
+    } \
+  } \
+  return mini; \
 }
 
 /*
-  Compute the minimizer of length m for a k-mer of length k at a
-  given position.
+  Decode a 64- or 32-bit integer back to the original char array
 */
-static inline dna32_t minimizer32_dna(const char* seq, int seqlen, int kstart, int k, int m)
-{
-  dna32_t mini = DEFAULT_MAX_32;
-  for (int i = kstart; i < k + k - m + 1; i++) {
-    dna32_t mhash = kmer32_dna(seq, seqlen, m, i);
-    if (mhash < mini) {
-      mini = mhash;
-    }
+#define __DECODE_DNA(dna_type_t) \
+  static inline void decode_##dna_type_t(dna_type_t hash, int len, char* s) \
+  { \
+    for (int i = len - 1; i >= 0; i--) { \
+      s[i] = dec_dna_8[hash & 3]; \
+      hash >>= 2; \
+    } \
   }
-  return mini;
-}
-
-#undef ENCODE_BASE
-#undef ENCODE_REV
 
 #endif /* DNA_HASH2_H */
