@@ -30,6 +30,8 @@ and
 |----|----|
 |`dna32_t hash_dna32_t(const char* seq, int seqlen)`|Return a unsigned int from a DNA sequence with length <= 16|
 |`dna64_t hash_dna64_t(const char* seq, int seqlen)`|Return a unsigned long long from a DNA sequence with length <= 32|
+|`dna32_t hash_dna32_t_rc(const char* seq, int seqlen)`|Return a unsigned int from the reverse-complement of a DNA sequence with length <= 16|
+|`dna64_t hash_dna64_t_rc(const char* seq, int seqlen)`|Return a unsigned long long from the reverse-complement of a DNA sequence with length <= 32|
 |`dna32_t kmer_dna32_t(const char* seq, int seqlen, int k, int kstart)`|Return the hash of a k-mer at position kstart|
 |`dna64_t kmer_dna64_t(const char* seq, int seqlen, int k, int kstart)`|Return the hash of a k-mer at position kstart|
 |`dna32_t minimizer_dna32_t(const char* seq, int seqlen, int kstart, int k, int m)`|Return the hash of the m-length minimizer of k-mer at position kstart|
